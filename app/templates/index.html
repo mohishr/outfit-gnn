@@ -528,7 +528,7 @@ function renderOutfitCard(outfit, index) {
     <li class="item-entry">
       <div class="item-icon">
         <img src="/api/image/${item.item_id}" alt="${item.category}"
-             onerror="this.style.display='none'; this.parentElement.querySelector('.icon-fallback').style.display='flex';"/>
+             onerror="console.error('Image failed to load:', this.src); this.style.display='none'; this.parentElement.querySelector('.icon-fallback').style.display='flex';"/>
         <span class="icon-fallback" style="display:none;">${getCategoryIcon(item.category)}</span>
       </div>
       <div class="item-details">

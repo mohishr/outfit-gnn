@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NGNN — Outfit Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:      #0d0d0d;
+      --paper:    #f5f2ed;
+      --cream:    #ede9e2;
+      --gold:     #b8975a;
+      --gold-lt:  #d4b07a;
+      --muted:    #888070;
+      --ok:       #2a6e3f;
+      --warn:     #8b3a1a;
+      --border:   rgba(13,13,13,0.12);
+      --mono:     'DM Mono', monospace;
+      --serif:    'Cormorant Garamond', Georgia, serif;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--serif);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 3rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+    }
+    header .sub {
+      font-size: 0.8rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    .status-pill {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 100px;
+      letter-spacing: 0.08em;
+    }
+    .status-pill.ok   { background: #d8edd f; color: var(--ok);   border: 1px solid var(--ok); }
+    .status-pill.warn { background: #fae9e0; color: var(--warn);  border: 1px solid var(--warn); }
+
+    /* ── Main Layout ── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem;
+    }
+
+    /* ── Prompt Section ── */
+    .prompt-section {
+      margin-bottom: 3rem;
+    }
+    .prompt-section .section-label {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .prompt-section .section-label span {
+      display: inline-block;
+      background: var(--gold);
+      color: white;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 18px;
+      margin-right: 0.5rem;
+      font-size: 0.65rem;
+    }
+
+    .prompt-input-wrapper {
+      display: flex;
+      gap: 1rem;
+      align-items: stretch;
+    }
+
+    .prompt-input {
+      flex: 1;
+      padding: 1rem 1.25rem;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      color: var(--ink);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .prompt-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(184, 151, 90, 0.15);
+    }
+    .prompt-input::placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ── Button ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2.5rem;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #2a2a2a; }
+    .btn:disabled { background: var(--muted); cursor: not-allowed; }
+    .btn .spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-label { opacity: 0.6; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Suggestion Pills ── */
+    .suggestions {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .suggestion-pill {
+      padding: 0.4rem 0.85rem;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .suggestion-pill:hover {
+      background: var(--gold);
+      color: white;
+      border-color: var(--gold);
+    }
+
+    /* ── Results Section ── */
+    .results-section {
+      margin-top: 2rem;
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+    }
+    .results-section.hidden { display: none; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .results-header .section-label {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .prompt-display {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--gold);
+    }
+
+    /* ── Outfit Cards ── */
+    .outfit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .outfit-card {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+    .outfit-card:nth-child(1) { animation-delay: 0.05s; }
+    .outfit-card:nth-child(2) { animation-delay: 0.10s; }
+    .outfit-card:nth-child(3) { animation-delay: 0.15s; }
+    .outfit-card:nth-child(4) { animation-delay: 0.20s; }
+    .outfit-card:nth-child(5) { animation-delay: 0.25s; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+    .outfit-card-header {
+      padding: 1rem 1.25rem;
+      background: var(--ink);
+      color: var(--paper);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .outfit-number {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+    }
+    .outfit-scores {
+      display: flex;
+      gap: 1rem;
+    }
+    .score-badge {
+      text-align: right;
+    }
+    .score-badge .value {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--gold-lt);
+    }
+    .score-badge .label {
+      font-size: 0.6rem;
+      color: rgba(245,242,237,0.6);
+      letter-spacing: 0.05em;
+    }
+
+    .outfit-items {
+      padding: 1rem 1.25rem;
+    }
+    .outfit-items h4 {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .item-list {
+      list-style: none;
+    }
+    .item-entry {
+      display: flex;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .item-entry:last-child { border-bottom: none; }
+
+    .item-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.85rem;
+      font-size: 1rem;
+      color: var(--muted);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .item-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .item-icon .icon-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      font-size: 1.2rem;
+      color: var(--muted);
+    }
+    .item-details {
+      flex: 1;
+    }
+    .item-category {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--ink);
+      font-weight: 400;
+    }
+    .item-id {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    /* ── Alert / Error ── */
+    .alert {
+      padding: 1rem 1.25rem;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .alert.error   { background: #fae9e0; color: var(--warn); border: 1px solid #e8b89a; display: block; }
+    .alert.success { background: #e4f0e8; color: var(--ok);   border: 1px solid #9dcbac; display: block; }
+
+    /* ── Loading State ── */
+    .loading-overlay {
+      text-align: center;
+      padding: 3rem;
+    }
+    .loading-overlay.hidden { display: none; }
+    .loading-text {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 1rem;
+      letter-spacing: 0.1em;
+    }
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+    .empty-state .icon {
+      font-size: 3rem;
+      opacity: 0.3;
+      margin-bottom: 1rem;
+    }
+    .empty-state p {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Footer hint ── */
+    .footer-hint {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 768px) {
+      main { padding: 1.5rem; }
+      header { flex-wrap: wrap; padding: 1.5rem; }
+      .prompt-input-wrapper { flex-direction: column; }
+      .btn { width: 100%; justify-content: center; }
+      .outfit-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>NGNN</h1>
+  <span class="sub">Outfit Intelligence</span>
+  <span class="status-pill {% if model_loaded %}ok{% else %}warn{% endif %}" id="status-pill">
+    {% if model_loaded %}● Model Loaded{% else %}● Initializing...{% endif %}
+  </span>
+</header>
+
+<main>
+  <!-- ══════════════ PROMPT INPUT ══════════════ -->
+  <section class="prompt-section">
+    <p class="section-label"><span>1</span>Describe Your Outfit</p>
+
+    <div class="prompt-input-wrapper">
+      <input
+        type="text"
+        class="prompt-input"
+        id="prompt-input"
+        placeholder="e.g., summer cozy blue vibes, casual fall outfit, elegant evening wear..."
+        autocomplete="off"
+      />
+      <button class="btn" id="generate-btn" onclick="generateOutfits()">
+        <span class="spinner"></span>
+        <span class="btn-label">Generate</span>
+      </button>
+    </div>
+
+    <div class="suggestions">
+      <span class="suggestion-pill" onclick="usePrompt('summer cozy blue vibes')">summer cozy blue vibes</span>
+      <span class="suggestion-pill" onclick="usePrompt('casual fall outfit')">casual fall outfit</span>
+      <span class="suggestion-pill" onclick="usePrompt('elegant evening wear')">elegant evening wear</span>
+      <span class="suggestion-pill" onclick="usePrompt('sporty athletic look')">sporty athletic look</span>
+      <span class="suggestion-pill" onclick="usePrompt('boho beach style')">boho beach style</span>
+      <span class="suggestion-pill" onclick="usePrompt('minimalist modern streetwear')">minimalist modern streetwear</span>
+    </div>
+
+    <div class="alert" id="alert-box"></div>
+  </section>
+
+  <!-- ══════════════ RESULTS ══════════════ -->
+  <section class="results-section hidden" id="results-section">
+    <div class="results-header">
+      <span class="section-label">Generated Outfits</span>
+      <span class="prompt-display" id="prompt-display"></span>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-overlay hidden" id="loading-overlay">
+      <div style="font-size: 2rem; opacity: 0.4;">◇</div>
+      <p class="loading-text">Generating outfits<span class="loading-dots"></span></p>
+    </div>
+
+    <!-- Outfit Grid -->
+    <div class="outfit-grid" id="outfit-grid"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state hidden" id="empty-state">
+      <div class="icon">◇</div>
+      <p>No outfits could be generated. Try a different prompt.</p>
+    </div>
+  </section>
+
+  <p class="footer-hint">
+    Enter a text prompt to generate compatible outfit combinations
+  </p>
+</main>
+
+<script>
+/* ─── Prompt Suggestions ─────────────────────────────────────────────── */
+const SUGGESTIONS = [
+  "summer cozy blue vibes",
+  "casual fall outfit",
+  "elegant evening wear",
+  "sporty athletic look",
+  "boho beach style",
+  "minimalist modern streetwear"
+];
+
+function usePrompt(text) {
+  document.getElementById("prompt-input").value = text;
+  generateOutfits();
+}
+
+/* ─── Alert Helper ────────────────────────────────────────────────────── */
+function showAlert(msg, type="error") {
+  const el = document.getElementById("alert-box");
+  el.textContent = msg;
+  el.className = `alert ${type}`;
+}
+function clearAlert() {
+  const el = document.getElementById("alert-box");
+  el.className = "alert";
+}
+
+/* ─── Loading State ──────────────────────────────────────────────────── */
+function setLoading(on) {
+  const btn = document.getElementById("generate-btn");
+  btn.classList.toggle("loading", on);
+  btn.disabled = on;
+}
+
+/* ─── Category Icon Map ──────────────────────────────────────────────── */
+function getCategoryIcon(category) {
+  const cat = category.toLowerCase();
+  if (cat.includes("top") || cat.includes("shirt") || cat.includes("blouse") || cat.includes("tee") || cat.includes("sweater")) return "⊞";
+  if (cat.includes("bottom") || cat.includes("pant") || cat.includes("jean") || cat.includes("short") || cat.includes("skirt")) return "⊟";
+  if (cat.includes("dress") || cat.includes("gown") || cat.includes("jumpsuit")) return "◈";
+  if (cat.includes("shoe") || cat.includes("sneaker") || cat.includes("boot") || cat.includes("sandal") || cat.includes("heel")) return "⊡";
+  if (cat.includes("bag") || cat.includes("purse") || cat.includes("backpack")) return "⊠";
+  if (cat.includes("hat") || cat.includes("cap") || cat.includes("beanie")) return "○";
+  if (cat.includes("watch") || cat.includes("jewelry") || cat.includes("necklace") || cat.includes("bracelet") || cat.includes("ring")) return "◇";
+  if (cat.includes("sunglass") || cat.includes("glass")) return "◐";
+  if (cat.includes("scarf") || cat.includes("belt")) return "⊢";
+  if (cat.includes("jacket") || cat.includes("coat") || cat.includes("blazer") || cat.includes("outerwear")) return "⊬";
+  return "◆";
+}
+
+/* ─── Render Outfit Card ─────────────────────────────────────────────── */
+function renderOutfitCard(outfit, index) {
+  const card = document.createElement("div");
+  card.className = "outfit-card";
+
+  const itemsHtml = outfit.items.map(item => `
+    <li class="item-entry">
+      <div class="item-icon">
+        <img src="/api/image/${item.item_id}" alt="${item.category}"
+             onerror="this.style.display='none'; this.parentElement.querySelector('.icon-fallback').style.display='flex';"/>
+        <span class="icon-fallback" style="display:none;">${getCategoryIcon(item.category)}</span>
+      </div>
+      <div class="item-details">
+        <div class="item-category">${item.category}</div>
+        <div class="item-id">${item.item_id}</div>
+      </div>
+    </li>
+  `).join("");
+
+  card.innerHTML = `
+    <div class="outfit-card-header">
+      <span class="outfit-number">OUTFIT ${index + 1}</span>
+      <div class="outfit-scores">
+        <div class="score-badge">
+          <div class="value">${(outfit.compatibility_score || 0).toFixed(2)}</div>
+          <div class="label">COMPAT</div>
+        </div>
+        <div class="score-badge">
+          <div class="value">${(outfit.prompt_match_score || 0).toFixed(2)}</div>
+          <div class="label">MATCH</div>
+        </div>
+      </div>
+    </div>
+    <div class="outfit-items">
+      <h4>Items (${outfit.items.length})</h4>
+      <ul class="item-list">
+        ${itemsHtml}
+      </ul>
+    </div>
+  `;
+
+  return card;
+}
+
+/* ─── Main: Generate Outfits ─────────────────────────────────────────── */
+async function generateOutfits() {
+  const prompt = document.getElementById("prompt-input").value.trim();
+
+  if (!prompt) {
+    showAlert("Please enter a prompt to generate outfits.");
+    return;
+  }
+
+  clearAlert();
+  setLoading(true);
+
+  // Show results section with loading state
+  const resultsSection = document.getElementById("results-section");
+  const loadingOverlay = document.getElementById("loading-overlay");
+  const outfitGrid = document.getElementById("outfit-grid");
+  const emptyState = document.getElementById("empty-state");
+
+  resultsSection.classList.remove("hidden");
+  loadingOverlay.classList.remove("hidden");
+  outfitGrid.innerHTML = "";
+  emptyState.classList.add("hidden");
+
+  document.getElementById("prompt-display").textContent = `"${prompt}"`;
+
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: prompt,
+        num_outfits: 3
+      })
+    });
+
+    const data = await res.json();
+
+    loadingOverlay.classList.add("hidden");
+
+    if (!res.ok) {
+      showAlert(data.error || "Server error occurred.");
+      return;
+    }
+
+    if (!data.success || !data.outfits || data.outfits.length === 0) {
+      emptyState.classList.remove("hidden");
+      return;
+    }
+
+    // Render outfit cards
+    data.outfits.forEach((outfit, i) => {
+      outfitGrid.appendChild(renderOutfitCard(outfit, i));
+    });
+
+  } catch (e) {
+    loadingOverlay.classList.add("hidden");
+    showAlert("Request failed: " + e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+/* ─── Enter Key to Submit ────────────────────────────────────────────── */
+document.getElementById("prompt-input").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") {
+    generateOutfits();
+  }
+});
+</script>
+</body>
+</html>

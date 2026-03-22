@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NGNN — Outfit Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:      #0d0d0d;
+      --paper:    #f5f2ed;
+      --cream:    #ede9e2;
+      --gold:     #b8975a;
+      --gold-lt:  #d4b07a;
+      --muted:    #888070;
+      --ok:       #2a6e3f;
+      --warn:     #8b3a1a;
+      --border:   rgba(13,13,13,0.12);
+      --mono:     'DM Mono', monospace;
+      --serif:    'Cormorant Garamond', Georgia, serif;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--serif);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 3rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+    }
+    header .sub {
+      font-size: 0.8rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    .status-pill {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 100px;
+      letter-spacing: 0.08em;
+    }
+    .status-pill.ok   { background: #d8edd f; color: var(--ok);   border: 1px solid var(--ok); }
+    .status-pill.warn { background: #fae9e0; color: var(--warn);  border: 1px solid var(--warn); }
+
+    /* ── Layout ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: calc(100vh - 80px);
+    }
+
+    .panel {
+      padding: 3rem;
+      border-right: 1px solid var(--border);
+    }
+    .panel:last-child { border-right: none; }
+
+    .panel-title {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title span {
+      display: inline-block;
+      background: var(--gold);
+      color: white;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 18px;
+      margin-right: 0.5rem;
+      font-size: 0.65rem;
+    }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 1px dashed var(--gold);
+      border-radius: 4px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .upload-zone:hover { background: var(--cream); }
+    .upload-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+    }
+    .upload-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4; }
+    .upload-zone p {
+      font-size: 0.85rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Preview grid ── */
+    .previews {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      min-height: 10px;
+    }
+    .preview-item {
+      position: relative;
+      width: 80px; height: 80px;
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-item .rm {
+      position: absolute; top: 2px; right: 2px;
+      background: rgba(13,13,13,0.7); color: #fff;
+      border: none; border-radius: 50%;
+      width: 18px; height: 18px; font-size: 10px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .preview-item select {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      font-size: 0.55rem; background: rgba(255,255,255,0.9);
+      border: none; padding: 2px 3px;
+      font-family: var(--mono); color: var(--ink);
+      width: 100%;
+    }
+
+    /* ── Form controls ── */
+    label.field-label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      margin-top: 1.25rem;
+    }
+    select.field, input.field {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--ink);
+      appearance: none;
+    }
+    select.field:focus, input.field:focus {
+      outline: none; border-color: var(--gold);
+    }
+
+    /* ── Button ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      margin-top: 1.5rem;
+      padding: 0.75rem 2rem;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: none; border-radius: 3px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #2a2a2a; }
+    .btn:disabled { background: var(--muted); cursor: not-allowed; }
+    .btn .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-label { opacity: 0.6; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result card ── */
+    .result-area {
+      margin-top: 2rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+      display: none;
+    }
+    .result-area.visible { display: block; animation: fadeUp 0.4s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+    .score-display {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .score-number {
+      font-size: 3.5rem;
+      font-weight: 300;
+      line-height: 1;
+      color: var(--gold);
+    }
+    .score-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .score-bar-track {
+      height: 4px;
+      background: var(--cream);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-lt));
+      border-radius: 2px;
+      transition: width 0.8s cubic-bezier(0.22,1,0.36,1);
+      width: 0%;
+    }
+
+    /* ── Recommendation results ── */
+    .rec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .rec-card {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+    .rec-card:nth-child(1) { animation-delay: 0.05s; }
+    .rec-card:nth-child(2) { animation-delay: 0.10s; }
+    .rec-card:nth-child(3) { animation-delay: 0.15s; }
+    .rec-card:nth-child(4) { animation-delay: 0.20s; }
+    .rec-card:nth-child(5) { animation-delay: 0.25s; }
+    .rec-card .thumb {
+      width: 100%; aspect-ratio: 1;
+      background: #e0dcd4;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .rec-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .rec-card .thumb .no-img {
+      font-size: 1.5rem; opacity: 0.2;
+    }
+    .rec-card .rec-meta { padding: 0.5rem 0.6rem; }
+    .rec-card .rec-score {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--gold);
+      font-weight: 400;
+    }
+    .rec-card .rec-desc {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Error / info bar ── */
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .alert.error   { background: #fae9e0; color: var(--warn); border: 1px solid #e8b89a; display: block; }
+    .alert.success { background: #e4f0e8; color: var(--ok);   border: 1px solid #9dcbac; display: block; }
+
+    /* ── Misc ── */
+    .hint {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; }
+      .panel { border-right: none; border-bottom: 1px solid var(--border); }
+      header { flex-wrap: wrap; padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>NGNN</h1>
+  <span class="sub">Outfit Intelligence</span>
+  <span class="status-pill ok">● Model Loaded</span>
+</header>
+
+<main>
+
+  <!-- ══════════════ PANEL 1: Compatibility Score ══════════════ -->
+  <section class="panel">
+    <p class="panel-title"><span>1</span>Compatibility Score</p>
+
+    <div class="upload-zone" id="score-zone">
+      <input type="file" id="score-files" accept="image/*" multiple/>
+      <div class="icon">⊕</div>
+      <p>Drop outfit images here</p>
+      <p style="margin-top:0.3rem;font-size:0.68rem;">2 – 8 images · jpg / png</p>
+    </div>
+
+    <div class="previews" id="score-previews"></div>
+
+    <p class="hint">Optionally assign a category to each item for better accuracy.</p>
+
+    <button class="btn" id="score-btn" onclick="submitScore()">
+      <span class="spinner"></span>
+      <span class="btn-label">Analyse Outfit</span>
+    </button>
+
+    <div class="alert" id="score-alert"></div>
+
+    <div class="result-area" id="score-result">
+      <div class="score-display">
+        <div class="score-number" id="score-value">—</div>
+        <div class="score-label">compatibility<br>score</div>
+      </div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="score-bar"></div>
+      </div>
+      <p class="hint" id="score-items-hint" style="margin-top:0.75rem;"></p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PANEL 2: Recommendation ══════════════ -->
+  <section class="panel">
+    <p class="panel-title"><span>2</span>Item Recommendation</p>
+
+    {% if not mongo_ok %}
+    <div class="alert error" style="display:block;margin-bottom:1.5rem;">
+      MongoDB unavailable — recommendation engine is offline.
+    </div>
+    {% endif %}
+
+    <div class="upload-zone" id="rec-zone">
+      <input type="file" id="rec-files" accept="image/*" multiple/>
+      <div class="icon">⊕</div>
+      <p>Upload your partial outfit</p>
+      <p style="margin-top:0.3rem;font-size:0.68rem;">Items you already have</p>
+    </div>
+
+    <div class="previews" id="rec-previews"></div>
+
+    <label class="field-label">Target category to find</label>
+    <select class="field" id="rec-target">
+      <option value="">— select category —</option>
+      {% for cat in categories %}
+      <option value="{{ cat }}">{{ cat }}</option>
+      {% endfor %}
+    </select>
+
+    <p class="hint">Top 5 items will be ranked by outfit compatibility.</p>
+
+    <button class="btn" id="rec-btn" onclick="submitRecommend()"
+      {% if not mongo_ok %}disabled{% endif %}>
+      <span class="spinner"></span>
+      <span class="btn-label">Find Items</span>
+    </button>
+
+    <div class="alert" id="rec-alert"></div>
+
+    <div class="result-area" id="rec-result">
+      <p class="panel-title" style="margin-bottom:1rem;">Top Matches</p>
+      <div class="rec-grid" id="rec-grid"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ─── State ─────────────────────────────────────────────────────────────── */
+const scoreFiles = [];   // { file, objectUrl, categoryId }
+const recFiles   = [];
+
+const CATEGORIES = {{ categories | tojson }};
+
+/* ─── Generic upload handling ───────────────────────────────────────────── */
+function initUpload(inputId, zoneId, previewsId, fileStore) {
+  const input    = document.getElementById(inputId);
+  const zone     = document.getElementById(zoneId);
+  const previews = document.getElementById(previewsId);
+
+  input.addEventListener("change", () => {
+    Array.from(input.files).forEach(f => addFile(f, fileStore, previews));
+    input.value = "";   // allow re-picking the same file
+  });
+
+  zone.addEventListener("dragover", e => { e.preventDefault(); zone.style.background = "var(--cream)"; });
+  zone.addEventListener("dragleave", () => { zone.style.background = ""; });
+  zone.addEventListener("drop", e => {
+    e.preventDefault(); zone.style.background = "";
+    Array.from(e.dataTransfer.files).forEach(f => addFile(f, fileStore, previews));
+  });
+}
+
+function addFile(file, store, previewsEl) {
+  if (!file.type.startsWith("image/")) return;
+  if (store.length >= 8) { showAlert(previewsEl.id.replace("-previews","-alert"), "Max 8 images."); return; }
+
+  const url = URL.createObjectURL(file);
+  const idx = store.length;
+  store.push({ file, url, categoryId: "" });
+
+  const div = document.createElement("div");
+  div.className = "preview-item";
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <img src="${url}" alt="item ${idx+1}"/>
+    <button class="rm" onclick="removeFile(${idx},'${previewsEl.id}',this.closest('.preview-item'))">✕</button>
+    <select onchange="store_setCat(this,${idx})">
+      <option value="">category</option>
+      ${CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join("")}
+    </select>`;
+
+  // patch select to know which store
+  div.querySelector("select").setAttribute("data-store", previewsEl.id);
+  previewsEl.appendChild(div);
+}
+
+function store_setCat(sel, idx) {
+  const storeId = sel.getAttribute("data-store");
+  const store   = storeId.includes("score") ? scoreFiles : recFiles;
+  store[idx].categoryId = sel.value;
+}
+
+function removeFile(idx, previewsId, el) {
+  const store = previewsId.includes("score") ? scoreFiles : recFiles;
+  store.splice(idx, 1);
+  el.remove();
+  // re-index remaining items
+  document.querySelectorAll(`#${previewsId} .preview-item`).forEach((item, i) => {
+    item.dataset.idx = i;
+    item.querySelector(".rm").setAttribute("onclick", `removeFile(${i},'${previewsId}',this.closest('.preview-item'))`);
+  });
+}
+
+initUpload("score-files", "score-zone", "score-previews", scoreFiles);
+initUpload("rec-files",   "rec-zone",   "rec-previews",   recFiles);
+
+/* ─── Alert helper ──────────────────────────────────────────────────────── */
+function showAlert(id, msg, type="error") {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `alert ${type}`;
+}
+function clearAlert(id) {
+  const el = document.getElementById(id);
+  el.className = "alert";
+}
+
+/* ─── Loading state ─────────────────────────────────────────────────────── */
+function setLoading(btnId, on) {
+  document.getElementById(btnId).classList.toggle("loading", on);
+}
+
+/* ─── Feature 1: Compatibility Score ───────────────────────────────────── */
+async function submitScore() {
+  clearAlert("score-alert");
+  if (scoreFiles.length < 2) {
+    showAlert("score-alert", "Upload at least 2 images."); return;
+  }
+
+  setLoading("score-btn", true);
+
+  const fd = new FormData();
+  scoreFiles.forEach(({ file, categoryId }) => {
+    fd.append("images[]", file);
+    fd.append("categories[]", categoryId || "");
+  });
+
+  try {
+    const res  = await fetch("/api/score", { method: "POST", body: fd });
+    const data = await res.json();
+
+    if (!res.ok) { showAlert("score-alert", data.error || "Server error."); return; }
+
+    const s = data.score;
+    document.getElementById("score-value").textContent = s.toFixed(3);
+    // Normalise to 0–100% for the bar (scores typically 0–5 range, clamp)
+    const pct = Math.min(100, Math.max(0, (s / 3) * 100));
+    document.getElementById("score-bar").style.width = pct + "%";
+    document.getElementById("score-items-hint").textContent =
+      `Analysed ${data.num_items} item${data.num_items !== 1 ? "s" : ""}`;
+    document.getElementById("score-result").classList.add("visible");
+
+  } catch (e) {
+    showAlert("score-alert", "Request failed: " + e.message);
+  } finally {
+    setLoading("score-btn", false);
+  }
+}
+
+/* ─── Feature 2: Recommendation ────────────────────────────────────────── */
+async function submitRecommend() {
+  clearAlert("rec-alert");
+  const target = document.getElementById("rec-target").value;
+
+  if (recFiles.length === 0)   { showAlert("rec-alert", "Upload at least 1 outfit image."); return; }
+  if (!target)                  { showAlert("rec-alert", "Select a target category."); return; }
+
+  setLoading("rec-btn", true);
+
+  const fd = new FormData();
+  recFiles.forEach(({ file, categoryId }) => {
+    fd.append("images[]", file);
+    fd.append("categories[]", categoryId || "");
+  });
+  fd.append("target", target);
+  fd.append("top_n", "5");
+
+  try {
+    const res  = await fetch("/api/recommend", { method: "POST", body: fd });
+    const data = await res.json();
+
+    if (!res.ok) { showAlert("rec-alert", data.error || "Server error."); return; }
+
+    renderRecommendations(data.results, data.target_category);
+  } catch (e) {
+    showAlert("rec-alert", "Request failed: " + e.message);
+  } finally {
+    setLoading("rec-btn", false);
+  }
+}
+
+function renderRecommendations(results, category) {
+  const grid = document.getElementById("rec-grid");
+  grid.innerHTML = "";
+
+  if (!results.length) {
+    grid.innerHTML = `<p class="hint">No items found for <em>${category}</em>.</p>`;
+    document.getElementById("rec-result").classList.add("visible");
+    return;
+  }
+
+  results.forEach((item, i) => {
+    const imgHtml = item.image_base64
+      ? `<img src="data:image/jpeg;base64,${item.image_base64}" alt="${item.description}"/>`
+      : `<span class="no-img">◻</span>`;
+
+    const card = document.createElement("div");
+    card.className = "rec-card";
+    card.innerHTML = `
+      <div class="thumb">${imgHtml}</div>
+      <div class="rec-meta">
+        <div class="rec-score">${item.score.toFixed(3)}</div>
+        <div class="rec-desc" title="${item.description}">${item.description || item.item_id}</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  document.getElementById("rec-result").classList.add("visible");
+}
+</script>
+</body>
+</html>

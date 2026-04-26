@@ -1,174 +1,122 @@
-# Project Goal: Text-to-Outfit Generation with GNN
+# Outfit GNN — Text-to-Outfit Recommender (Production)
 
-## Vision
+Text prompt → top-k Polyvore outfits, ranked by an NGNN compatibility score
+combined with a CLIP prompt-match score. Filtered to a fashion-only category
+set so beauty/tech/home noise can't pollute recommendations.
 
-Build a system that generates complete, compatible outfit sets from natural language prompts.
-
-**Input Example:**
-```
-"Suggest me outfit for summer cozy blue vibes"
-```
-
-**Output Example:**
-```
-{
-  "items": [
-    {"category": "Tops", "item_id": "..."},
-    {"category": "Shorts", "item_id": "..."},
-    {"category": "Sandals", "item_id": "..."},
-    {"category": "Sunglasses", "item_id": "..."},
-    {"category": "Necklaces", "item_id": "..."}
-  ],
-  "compatibility_score": 0.94,
-  "prompt_match_score": 0.89
-}
-```
-
-## Architecture Overview
+## Layout
 
 ```
-                    ┌─────────────────────────────────────────┐
-Text Prompt ───────▶│  Text Encoder (CLIP)                   │
-                    │  → Text Embedding: [512]               │
-                    └────────────────┬──────────────────────┘
-                                       │
-                                       ▼
-                    ┌─────────────────────────────────────────┐
-                    │  GNN Compatibility Model                │
-                    │                                         │
-Category ──────────▶│  ┌─────────────┐    ┌─────┐            │
-Embedding (128)    │  │   Fusion    │───▶│ GAT │ ────▶      │
-                    │  │  (256-dim) │    │     │              │
-Image ─────────────▶│  └─────────────┘    └─────┘              │
-Feature (2048)     │  CNN→128 projection                       │
-                    │                                         │
-                    │  Learn: item ↔ item compatibility       │
-                    └────────────────┬──────────────────────┘
-                                       │
-                                       ▼
-                    ┌─────────────────────────────────────────┐
-                    │  Generation Module                      │
-                    │  - Given seed items + prompt            │
-                    │  - Generate/add compatible items         │
-                    │  - Score and rank complete outfits      │
-                    └─────────────────────────────────────────┘
+data/                          polyvore json (train/test outfit cliques, category map)
+src/
+  config.py                    paths + IMAGE_DIR + filter thresholds + model dims
+  filter.py                    deny-list of non-fashion categories
+  dataset.py                   load + filter outfits, dense category remap (cached)
+  model.py                     NGNN: emb -> T-hop msg pass + dropout -> pair MLP
+  text_encoder.py              CLIP text encoder (fallback: keyword + vibe table)
+  recommend.py                 3-stage pipeline (Recommender class + CLI)
+  train.py                     contrastive training, AUC eval, best-ckpt saving
+app/
+  app.py                       Flask: GET / · POST /recommend · GET /image/<set>/<i>
+  templates/index.html         editorial UI (cream + gold, serif + mono)
+weights/
+  ngnn.pt                      checkpoint (stores num_cats, dim, hops, AUC)
+  cat_text_embeds.pt           cached CLIP category embeddings
 ```
 
-### Dual-Feature Input
+## Filtering — why and what
 
-Each item has TWO representations:
-1. **Category Embedding** (128-dim): Learned from category ID
-2. **Visual Embedding** (128-dim): Projected 2048-dim CNN features
+The polyvore dataset includes Lipstick (2326 occurrences), Tech Accessories
+(2454), Eyeshadow, Nail Polish, Home Decor, Floral Decor, Books, Toys,
+Stationery, Drinkware, Food, Font etc. They co-occur with apparel inside
+"sets" but contribute no outfit-compatibility signal — they only dilute it.
 
-Concatenated → 256-dim fused node feature for GNN
+`filter.py` carries an explicit deny-list of ~43 non-fashion category names.
+Combined with `MIN_CATEGORY_FREQ` from `config.py`, this keeps **78
+fashion categories** out of the 380 in the raw category file (120 of which
+have any data). 16,431 / 16,983 train outfits and 2,521 / 2,697 test outfits
+survive (≥ 3 fashion items each).
 
-## Project Phases
+After filtering, `dataset.py` rebuilds a contiguous remap so the GNN
+embedding table has exactly `num_cats = 78` entries.
 
-### Phase 1: Data Processing & Analysis
-- [x] Explore dataset structure
-- [x] Build category embeddings from co-occurrence
-- [x] Create train/test splits
-- [x] Identify image feature location (444K pre-extracted 2048-dim vectors)
-- [ ] Build graph adjacency matrices from outfits
-- [ ] Create mapping: outfit items ↔ image feature files
+## Pipeline
 
-### Phase 2: GNN Model Development
-- [ ] Implement dual-stream node features (category + visual)
-- [ ] Build CNN projector (2048 → 128 dim)
-- [ ] Build Graph Attention Network (GAT) for compatibility scoring
-- [ ] Train on outfit compatibility (link prediction)
-- [ ] Validate on held-out test outfits
+**Stage 1 — Prompt → category preference vector (TextEncoder)**
+CLIP text encoder embeds the prompt and every kept category name
+("a fashion item: <name>"). Cosine similarity → min-max normalised score
+per category. Falls back to a curated vibe synonym table (summer →
+shorts/sandals/sunglasses, winter → coats/sweaters/boots, etc.) if CLIP
+isn't available.
 
-### Phase 3: Text Conditioning
-- [ ] Integrate text encoder (CLIP)
-- [ ] Learn joint text-item embeddings
-- [ ] Condition generation on text prompts
-
-### Phase 4: Generation & Evaluation
-- [ ] Implement outfit generation from seed items + prompt
-- [ ] Build complete outfit reconstruction
-- [ ] Evaluate: compatibility scores, prompt matching
-- [ ] User interface for prompt input
-
-## Key Technical Decisions
-
-| Aspect | Decision | Rationale |
-|--------|----------|-----------|
-| GNN Architecture | GAT (Graph Attention Network) | Learns adaptive importance between item pairs |
-| Node Features | Category (128-dim) + Visual (128-dim) | Dual representation for richer semantics |
-| Visual Projector | MLP (2048 → 128) | Learn visual compatibility patterns |
-| Compatibility Score | Edge prediction probability | Direct optimization for compatibility |
-| Text Encoding | CLIP | Strong fashion/visual-text alignment |
-| Generation Strategy | Iterative item addition | Allows controlled outfit construction |
-
-## Dataset for GNN Training
-
-### Outfit Data
-- **16,983 training outfits** (cliques of compatible items)
-- **120 unique categories**
-- **Co-occurrence patterns** = ground truth compatibility
-
-### Image Features (Pre-extracted)
-- **Location:** `Fashion-Recommendation-system-using-Graph-Neural-Networks-GNN-1/data/polyvore_image_vectors/images/`
-- **Pattern:** `{outfit_id}_{item_position}.json`
-- **Vector Size:** 2048-dimensional CNN features
-- **Total Files:** 444,371 image feature vectors
-
-### Data Linking
+**Stage 2 — Score every candidate outfit**
 ```
-outfit["set_id"] + "_" + item_index → image_feature_file
-Example: "100002074_0.json" → CNN vector [2048-dim]
+prompt_match = mean(cat_score[c_i])               in [0, 1]
+compat       = NGNN.outfit_score(rcats(O))         in [0, 1]   (precomputed)
+final        = α · prompt_match + (1-α) · compat
 ```
 
-**GNN learns:**
-1. Node representations combining category AND visual features
-2. Edge weights representing compatibility strength
-3. Generalization: predict compatibility for unseen category pairs
+**Stage 3 — Return top-k outfits**
+Each item carries `set_id`, `index`, category name, and `image_url`
+(`/image/<set_id>/<index>` — served from `$IMAGE_DIR/<set_id>/<index>.jpg`).
 
-## Success Metrics
-
-| Metric | Description | Target |
-|--------|-------------|--------|
-| Compatibility Score | Avg compatibility within generated outfit | > 0.85 |
-| Prompt Match | CLIP similarity between prompt and generated items | > 0.80 |
-| Diversity | variety in generated outfits for same prompt | > 0.70 |
-| Validity | % of generated outfits matching training distribution | > 0.90 |
-
-## File Structure (To Be Created)
+## NGNN
 
 ```
-final-outfit/
-├── CLAUDE.md              # This file
-├── data/
-│   └── README.md          # Dataset documentation
-├── src/
-│   ├── data/              # Data loading & processing
-│   │   ├── dataset.py
-│   │   ├── graph_builder.py
-│   │   └── image_features.py   # NEW: Image feature loader
-│   ├── models/            # Model definitions
-│   │   ├── gnn.py         # GAT architecture
-│   │   ├── text_encoder.py
-│   │   ├── visual_projector.py # NEW: CNN→embedding MLP
-│   │   └── generator.py
-│   └── training/
-│       ├── train_compat.py
-│       └── train_gen.py
-├── notebooks/
-│   └── exploration.ipynb
-└── README.md
+emb:        Embedding(78, 128)                     category vectors
+msg_l:      [Linear(128, 128)] × hops              per-hop message projection
+upd_l:      [Linear(256, 128)] × hops              fuse self || mean(neighbours)
+dropout:    p=0.2 after each hop and inside scorer
+score:      MLP(256 -> 128 -> 1)                   pair compatibility logit
 ```
 
-## Current Status
+`hops = 2`: each item sees 2-hop outfit context — neighbours that themselves
+were refined by their own neighbours.
 
-**Done:**
-- Dataset exploration and documentation
-- Understood outfit-as-graph representation
-- Identified GNN training objectives
-- Located 444K pre-extracted image features (2048-dim CNN vectors)
+## Training
 
-**Next Steps:**
-1. Create mapping between outfit items and image feature files
-2. Build dual-stream node features (category + visual)
-3. Implement GNN for compatibility scoring
-4. Train and validate on test set
+Per real outfit O (size n):
+- `pos = O`                         — all internal pairs are positive
+- `easy_neg = n random distinct categories` — fully random outfit
+- `hard_neg = O with one slot replaced by a random category` — almost-real
+
+Loss = BCE on positive pairs + BCE on both negative sets.
+Optimiser: AdamW (`lr=2e-3`, `wd=1e-4`), cosine LR schedule, grad-clip 1.0.
+
+Hard negatives matter: a model that only sees fully-random negatives learns
+to detect "is this set incoherent at all" (easy). Hard negatives push it
+to learn "is this *the right* item for this slot", which is what
+recommendation needs.
+
+## Evaluation — AUC on the held-out test split
+
+Per test outfit:
+```
+pos_score = NGNN.outfit_score(real_cats)
+neg_score = NGNN.outfit_score(real_cats with one slot replaced)
+```
+Then `AUC = P(pos_score > neg_score)` over all (pos, neg) pairs.
+
+The training loop logs AUC every epoch and keeps the best-AUC state. The
+checkpoint records its AUC; the UI surfaces it as a status pill.
+
+## Why outfit retrieval, not item generation
+
+The GNN scores categories, not items — every item of category C has the same
+embedding. Per-item ranking inside a category needs item-level features
+(visual or textual) or one-node-per-item training. The honest framing today
+is: "rank existing outfits by category-level compatibility weighted against
+prompt match, return their items".
+
+Upgrade path: replace `cid2rcid` with a dense item-id remap (`set_id_idx ->
+int`), keep the NGNN otherwise unchanged. Each item becomes its own node;
+co-occurrence trains item-specific embeddings. ~30 line change in
+`dataset.py` and `model.py`.
+
+## Run
+
+```bash
+pip install -r requirements.txt          # torch, flask, numpy, transformer
+
+python app/app.py                        # http://localhost:5000
+```

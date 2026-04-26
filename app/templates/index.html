@@ -22,381 +22,189 @@
       --mono:     'DM Mono', monospace;
       --serif:    'Cormorant Garamond', Georgia, serif;
     }
-
     html { font-size: 16px; }
-
-    body {
-      background: var(--paper);
-      color: var(--ink);
-      font-family: var(--serif);
-      min-height: 100vh;
-    }
+    body { background: var(--paper); color: var(--ink); font-family: var(--serif); min-height: 100vh; }
 
     /* ── Header ── */
     header {
       border-bottom: 1px solid var(--border);
       padding: 2rem 3rem;
-      display: flex;
-      align-items: baseline;
-      gap: 1.5rem;
+      display: flex; align-items: baseline; gap: 1.5rem; flex-wrap: wrap;
     }
-    header h1 {
-      font-size: 1.75rem;
-      font-weight: 300;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
+    header h1 { font-size: 1.75rem; font-weight: 300; letter-spacing: 0.25em; text-transform: uppercase; }
+    header .sub { font-size: 0.8rem; font-family: var(--mono); color: var(--muted); letter-spacing: 0.1em; }
+    .pills { margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pill {
+      font-family: var(--mono); font-size: 0.7rem; padding: 0.3rem 0.75rem;
+      border-radius: 100px; letter-spacing: 0.08em;
+      background: var(--cream); color: var(--muted); border: 1px solid var(--border);
     }
-    header .sub {
-      font-size: 0.8rem;
-      font-family: var(--mono);
-      color: var(--muted);
-      letter-spacing: 0.1em;
-    }
-    .status-pill {
-      margin-left: auto;
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      padding: 0.3rem 0.75rem;
-      border-radius: 100px;
-      letter-spacing: 0.08em;
-    }
-    .status-pill.ok   { background: #d8edd f; color: var(--ok);   border: 1px solid var(--ok); }
-    .status-pill.warn { background: #fae9e0; color: var(--warn);  border: 1px solid var(--warn); }
+    .pill.ok   { background: #e4f0e8; color: var(--ok);   border-color: #9dcbac; }
+    .pill.warn { background: #fae9e0; color: var(--warn); border-color: #e8b89a; }
 
-    /* ── Main Layout ── */
-    main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 3rem;
-    }
-
-    /* ── Prompt Section ── */
-    .prompt-section {
-      margin-bottom: 3rem;
-    }
-    .prompt-section .section-label {
-      font-size: 0.7rem;
-      font-family: var(--mono);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
+    /* ── Hero / search ── */
+    .hero {
+      padding: 3.5rem 3rem 2rem;
       border-bottom: 1px solid var(--border);
+      max-width: 1100px; margin: 0 auto;
     }
-    .prompt-section .section-label span {
-      display: inline-block;
-      background: var(--gold);
-      color: white;
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 18px;
-      margin-right: 0.5rem;
-      font-size: 0.65rem;
-    }
+    .hero h2 { font-size: 2.5rem; font-weight: 300; line-height: 1.15; margin-bottom: 0.5rem; }
+    .hero h2 em { color: var(--gold); font-style: italic; }
+    .hero p { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); margin-bottom: 2rem; }
 
-    .prompt-input-wrapper {
-      display: flex;
-      gap: 1rem;
-      align-items: stretch;
-    }
-
-    .prompt-input {
+    .search-row { display: flex; gap: 0.75rem; }
+    input.field, select.field {
       flex: 1;
-      padding: 1rem 1.25rem;
+      padding: 0.95rem 1.1rem;
       background: var(--cream);
       border: 1px solid var(--border);
-      border-radius: 4px;
-      font-family: var(--serif);
-      font-size: 1.1rem;
-      color: var(--ink);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .prompt-input:focus {
-      outline: none;
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(184, 151, 90, 0.15);
-    }
-    .prompt-input::placeholder {
-      color: var(--muted);
-      font-style: italic;
-    }
-
-    /* ── Button ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 1rem 2.5rem;
-      background: var(--ink);
-      color: var(--paper);
+      border-radius: 3px;
       font-family: var(--mono);
-      font-size: 0.75rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+    input.field:focus, select.field:focus { outline: none; border-color: var(--gold); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.6rem;
+      padding: 0.95rem 2.2rem;
+      background: var(--ink); color: var(--paper);
+      font-family: var(--mono); font-size: 0.78rem;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      border: none; border-radius: 3px; cursor: pointer;
       transition: background 0.15s;
-      white-space: nowrap;
     }
     .btn:hover { background: #2a2a2a; }
     .btn:disabled { background: var(--muted); cursor: not-allowed; }
     .btn .spinner {
-      display: none;
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      display: none; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
     }
     .btn.loading .spinner { display: block; }
     .btn.loading .btn-label { opacity: 0.6; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Suggestion Pills ── */
-    .suggestions {
-      margin-top: 1rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+    /* Controls row */
+    .controls {
+      display: flex; gap: 1.5rem; align-items: center; margin-top: 1.25rem; flex-wrap: wrap;
     }
-    .suggestion-pill {
-      padding: 0.4rem 0.85rem;
-      background: var(--cream);
+    .controls label {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-family: var(--mono); font-size: 0.7rem;
+      color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .controls input[type=number] {
+      width: 60px; padding: 0.35rem 0.5rem;
+      background: var(--cream); border: 1px solid var(--border);
+      border-radius: 3px; font-family: var(--mono); font-size: 0.8rem;
+    }
+    .controls input[type=range] { width: 130px; accent-color: var(--gold); }
+
+    .chips { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chip {
+      font-family: var(--mono); font-size: 0.7rem;
+      padding: 0.3rem 0.7rem;
+      background: var(--paper);
       border: 1px solid var(--border);
       border-radius: 100px;
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      color: var(--muted);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s;
     }
-    .suggestion-pill:hover {
-      background: var(--gold);
-      color: white;
-      border-color: var(--gold);
-    }
+    .chip:hover { border-color: var(--gold); color: var(--gold); }
 
-    /* ── Results Section ── */
-    .results-section {
-      margin-top: 2rem;
-      border-top: 1px solid var(--border);
-      padding-top: 2rem;
+    /* ── Results ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 2.5rem 3rem 4rem; }
+    .panel-title {
+      font-size: 0.7rem; font-family: var(--mono);
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: baseline; gap: 0.75rem;
     }
-    .results-section.hidden { display: none; }
-
-    .results-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.5rem;
-    }
-    .results-header .section-label {
-      font-size: 0.7rem;
-      font-family: var(--mono);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .prompt-display {
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      color: var(--gold);
-    }
-
-    /* ── Outfit Cards ── */
-    .outfit-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.5rem;
-    }
+    .panel-title .count { color: var(--gold); }
 
     .outfit-card {
       background: var(--cream);
       border: 1px solid var(--border);
       border-radius: 6px;
-      overflow: hidden;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
       animation: fadeUp 0.4s ease both;
     }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
     .outfit-card:nth-child(1) { animation-delay: 0.05s; }
     .outfit-card:nth-child(2) { animation-delay: 0.10s; }
     .outfit-card:nth-child(3) { animation-delay: 0.15s; }
     .outfit-card:nth-child(4) { animation-delay: 0.20s; }
     .outfit-card:nth-child(5) { animation-delay: 0.25s; }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 
-    .outfit-card-header {
-      padding: 1rem 1.25rem;
-      background: var(--ink);
-      color: var(--paper);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .outfit-head {
+      display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.25rem;
+      flex-wrap: wrap;
     }
-    .outfit-number {
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      letter-spacing: 0.1em;
+    .outfit-rank {
+      font-size: 2rem; font-weight: 300; line-height: 1; color: var(--gold);
+      font-family: var(--serif); font-style: italic;
     }
-    .outfit-scores {
-      display: flex;
-      gap: 1rem;
+    .outfit-id { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; }
+    .outfit-scores { margin-left: auto; display: flex; gap: 1.25rem; }
+    .score { text-align: right; }
+    .score .v {
+      font-family: var(--mono); font-size: 1rem; color: var(--ink);
     }
-    .score-badge {
-      text-align: right;
-    }
-    .score-badge .value {
-      font-size: 1rem;
-      font-weight: 400;
-      color: var(--gold-lt);
-    }
-    .score-badge .label {
-      font-size: 0.6rem;
-      color: rgba(245,242,237,0.6);
-      letter-spacing: 0.05em;
+    .score .l {
+      font-family: var(--mono); font-size: 0.62rem;
+      color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
     }
 
-    .outfit-items {
-      padding: 1rem 1.25rem;
+    .items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.85rem;
     }
-    .outfit-items h4 {
-      font-size: 0.7rem;
-      font-family: var(--mono);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-    }
-
-    .item-list {
-      list-style: none;
-    }
-    .item-entry {
-      display: flex;
-      align-items: center;
-      padding: 0.6rem 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .item-entry:last-child { border-bottom: none; }
-
-    .item-icon {
-      width: 56px;
-      height: 56px;
+    .item {
       background: var(--paper);
       border: 1px solid var(--border);
       border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 0.85rem;
-      font-size: 1rem;
-      color: var(--muted);
       overflow: hidden;
-      flex-shrink: 0;
+      display: flex; flex-direction: column;
     }
-    .item-icon img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    .item .thumb {
+      width: 100%; aspect-ratio: 1;
+      background: #e0dcd4;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
     }
-    .item-icon .icon-fallback {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      font-size: 1.2rem;
-      color: var(--muted);
+    .item .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .item .thumb .no-img {
+      font-size: 1.4rem; color: var(--muted); opacity: 0.4; font-family: var(--mono);
     }
-    .item-details {
-      flex: 1;
-    }
-    .item-category {
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      color: var(--ink);
-      font-weight: 400;
-    }
-    .item-id {
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      color: var(--muted);
-      margin-top: 0.15rem;
+    .item .meta { padding: 0.5rem 0.65rem; font-size: 0.85rem; }
+    .item .cat { font-weight: 400; color: var(--ink); }
+    .item .id  { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); margin-top: 0.15rem; letter-spacing: 0.05em; }
+    .item .ps  {
+      font-family: var(--mono); font-size: 0.6rem; color: var(--gold);
+      margin-top: 0.2rem; letter-spacing: 0.05em;
     }
 
-    /* ── Alert / Error ── */
+    .empty, .loading-msg {
+      padding: 3rem 1rem; text-align: center;
+      font-family: var(--mono); font-size: 0.85rem; color: var(--muted);
+    }
     .alert {
-      padding: 1rem 1.25rem;
-      border-radius: 4px;
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      margin-top: 1rem;
+      padding: 0.85rem 1rem; border-radius: 3px;
+      font-family: var(--mono); font-size: 0.78rem; margin-bottom: 1rem;
       display: none;
     }
-    .alert.error   { background: #fae9e0; color: var(--warn); border: 1px solid #e8b89a; display: block; }
-    .alert.success { background: #e4f0e8; color: var(--ok);   border: 1px solid #9dcbac; display: block; }
-
-    /* ── Loading State ── */
-    .loading-overlay {
-      text-align: center;
-      padding: 3rem;
-    }
-    .loading-overlay.hidden { display: none; }
-    .loading-text {
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-top: 1rem;
-      letter-spacing: 0.1em;
-    }
-    .loading-dots::after {
-      content: '';
-      animation: dots 1.5s steps(4, end) infinite;
-    }
-    @keyframes dots {
-      0%, 20% { content: ''; }
-      40% { content: '.'; }
-      60% { content: '..'; }
-      80%, 100% { content: '...'; }
-    }
-
-    /* ── Empty State ── */
-    .empty-state {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--muted);
-    }
-    .empty-state .icon {
-      font-size: 3rem;
-      opacity: 0.3;
-      margin-bottom: 1rem;
-    }
-    .empty-state p {
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      letter-spacing: 0.05em;
-    }
-
-    /* ── Footer hint ── */
-    .footer-hint {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      color: var(--muted);
-      text-align: center;
-      letter-spacing: 0.05em;
-    }
+    .alert.error { background: #fae9e0; color: var(--warn); border: 1px solid #e8b89a; display: block; }
 
     @media (max-width: 768px) {
-      main { padding: 1.5rem; }
-      header { flex-wrap: wrap; padding: 1.5rem; }
-      .prompt-input-wrapper { flex-direction: column; }
-      .btn { width: 100%; justify-content: center; }
-      .outfit-grid { grid-template-columns: 1fr; }
+      header, .hero, main { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .hero h2 { font-size: 1.8rem; }
+      .search-row { flex-direction: column; }
+      .btn { justify-content: center; }
+      .outfit-scores { width: 100%; justify-content: flex-start; }
     }
   </style>
 </head>
@@ -405,232 +213,141 @@
 <header>
   <h1>NGNN</h1>
   <span class="sub">Outfit Intelligence</span>
-  <span class="status-pill {% if model_loaded %}ok{% else %}warn{% endif %}" id="status-pill">
-    {% if model_loaded %}● Model Loaded{% else %}● Initializing...{% endif %}
-  </span>
+  <div class="pills">
+    {% if ckpt.dummy %}
+      <span class="pill warn">● Dummy Weights</span>
+    {% else %}
+      <span class="pill ok">● AUC {{ '%.3f' % ckpt.auc if ckpt.auc else '—' }}</span>
+    {% endif %}
+    <span class="pill">{{ stats.kept_cats }}/{{ stats.raw_cats }} cats · {{ stats.kept_outfits_train + stats.kept_outfits_test }} outfits</span>
+    <span class="pill {{ 'ok' if clip_ok else 'warn' }}">
+      {{ 'CLIP Active' if clip_ok else 'Keyword Fallback' }}
+    </span>
+    <span class="pill {{ 'ok' if image_dir_ok else 'warn' }}">
+      {{ 'Images Linked' if image_dir_ok else 'No IMAGE_DIR' }}
+    </span>
+  </div>
 </header>
 
-<main>
-  <!-- ══════════════ PROMPT INPUT ══════════════ -->
-  <section class="prompt-section">
-    <p class="section-label"><span>1</span>Describe Your Outfit</p>
-
-    <div class="prompt-input-wrapper">
-      <input
-        type="text"
-        class="prompt-input"
-        id="prompt-input"
-        placeholder="e.g., summer cozy blue vibes, casual fall outfit, elegant evening wear..."
-        autocomplete="off"
-      />
-      <button class="btn" id="generate-btn" onclick="generateOutfits()">
-        <span class="spinner"></span>
-        <span class="btn-label">Generate</span>
-      </button>
-    </div>
-
-    <div class="suggestions">
-      <span class="suggestion-pill" onclick="usePrompt('summer cozy blue vibes')">summer cozy blue vibes</span>
-      <span class="suggestion-pill" onclick="usePrompt('casual fall outfit')">casual fall outfit</span>
-      <span class="suggestion-pill" onclick="usePrompt('elegant evening wear')">elegant evening wear</span>
-      <span class="suggestion-pill" onclick="usePrompt('sporty athletic look')">sporty athletic look</span>
-      <span class="suggestion-pill" onclick="usePrompt('boho beach style')">boho beach style</span>
-      <span class="suggestion-pill" onclick="usePrompt('minimalist modern streetwear')">minimalist modern streetwear</span>
-    </div>
-
-    <div class="alert" id="alert-box"></div>
-  </section>
-
-  <!-- ══════════════ RESULTS ══════════════ -->
-  <section class="results-section hidden" id="results-section">
-    <div class="results-header">
-      <span class="section-label">Generated Outfits</span>
-      <span class="prompt-display" id="prompt-display"></span>
-    </div>
-
-    <!-- Loading State -->
-    <div class="loading-overlay hidden" id="loading-overlay">
-      <div style="font-size: 2rem; opacity: 0.4;">◇</div>
-      <p class="loading-text">Generating outfits<span class="loading-dots"></span></p>
-    </div>
-
-    <!-- Outfit Grid -->
-    <div class="outfit-grid" id="outfit-grid"></div>
-
-    <!-- Empty State -->
-    <div class="empty-state hidden" id="empty-state">
-      <div class="icon">◇</div>
-      <p>No outfits could be generated. Try a different prompt.</p>
-    </div>
-  </section>
-
-  <p class="footer-hint">
-    Enter a text prompt to generate compatible outfit combinations
+<section class="hero">
+  <h2>Describe a vibe — <em>get a complete outfit.</em></h2>
+  <p>
+    A graph neural network (NGNN) ranks Polyvore outfits by category compatibility,
+    weighted against a CLIP-based prompt match. Top-k full outfit sets are returned.
   </p>
+
+  <div class="search-row">
+    <input class="field" id="prompt" placeholder="e.g. summer cozy blue vibes" value="summer cozy blue vibes"/>
+    <button class="btn" id="go" onclick="run()">
+      <span class="spinner"></span><span class="btn-label">Recommend</span>
+    </button>
+  </div>
+
+  <div class="controls">
+    <label>k <input type="number" id="k" value="5" min="1" max="20"/></label>
+    <label>α (prompt vs compat) <input type="range" id="alpha" min="0" max="1" step="0.05" value="0.5"/>
+      <span id="alpha-v" style="font-family:var(--mono);font-size:0.78rem;color:var(--ink);">0.50</span>
+    </label>
+  </div>
+
+  <div class="chips">
+    <span class="chip" onclick="setPrompt(this)">summer cozy blue vibes</span>
+    <span class="chip" onclick="setPrompt(this)">winter formal dress</span>
+    <span class="chip" onclick="setPrompt(this)">beach casual</span>
+    <span class="chip" onclick="setPrompt(this)">elegant party black</span>
+    <span class="chip" onclick="setPrompt(this)">minimalist office</span>
+    <span class="chip" onclick="setPrompt(this)">sporty athleisure</span>
+  </div>
+</section>
+
+<main>
+  <div class="alert" id="alert"></div>
+  <p class="panel-title">Recommendations <span class="count" id="count"></span></p>
+  <div id="results">
+    <div class="empty">Enter a prompt above to get outfit recommendations.</div>
+  </div>
 </main>
 
 <script>
-/* ─── Prompt Suggestions ─────────────────────────────────────────────── */
-const SUGGESTIONS = [
-  "summer cozy blue vibes",
-  "casual fall outfit",
-  "elegant evening wear",
-  "sporty athletic look",
-  "boho beach style",
-  "minimalist modern streetwear"
-];
+const $ = (id) => document.getElementById(id);
 
-function usePrompt(text) {
-  document.getElementById("prompt-input").value = text;
-  generateOutfits();
+$('alpha').addEventListener('input', e => $('alpha-v').textContent = (+e.target.value).toFixed(2));
+
+function setPrompt(el) { $('prompt').value = el.textContent; run(); }
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-/* ─── Alert Helper ────────────────────────────────────────────────────── */
-function showAlert(msg, type="error") {
-  const el = document.getElementById("alert-box");
-  el.textContent = msg;
-  el.className = `alert ${type}`;
-}
-function clearAlert() {
-  const el = document.getElementById("alert-box");
-  el.className = "alert";
-}
+async function run() {
+  const prompt = $('prompt').value.trim();
+  if (!prompt) return;
+  const k = parseInt($('k').value) || 5;
+  const alpha = parseFloat($('alpha').value);
 
-/* ─── Loading State ──────────────────────────────────────────────────── */
-function setLoading(on) {
-  const btn = document.getElementById("generate-btn");
-  btn.classList.toggle("loading", on);
-  btn.disabled = on;
-}
-
-/* ─── Category Icon Map ──────────────────────────────────────────────── */
-function getCategoryIcon(category) {
-  const cat = category.toLowerCase();
-  if (cat.includes("top") || cat.includes("shirt") || cat.includes("blouse") || cat.includes("tee") || cat.includes("sweater")) return "⊞";
-  if (cat.includes("bottom") || cat.includes("pant") || cat.includes("jean") || cat.includes("short") || cat.includes("skirt")) return "⊟";
-  if (cat.includes("dress") || cat.includes("gown") || cat.includes("jumpsuit")) return "◈";
-  if (cat.includes("shoe") || cat.includes("sneaker") || cat.includes("boot") || cat.includes("sandal") || cat.includes("heel")) return "⊡";
-  if (cat.includes("bag") || cat.includes("purse") || cat.includes("backpack")) return "⊠";
-  if (cat.includes("hat") || cat.includes("cap") || cat.includes("beanie")) return "○";
-  if (cat.includes("watch") || cat.includes("jewelry") || cat.includes("necklace") || cat.includes("bracelet") || cat.includes("ring")) return "◇";
-  if (cat.includes("sunglass") || cat.includes("glass")) return "◐";
-  if (cat.includes("scarf") || cat.includes("belt")) return "⊢";
-  if (cat.includes("jacket") || cat.includes("coat") || cat.includes("blazer") || cat.includes("outerwear")) return "⊬";
-  return "◆";
-}
-
-/* ─── Render Outfit Card ─────────────────────────────────────────────── */
-function renderOutfitCard(outfit, index) {
-  const card = document.createElement("div");
-  card.className = "outfit-card";
-
-  const itemsHtml = outfit.items.map(item => `
-    <li class="item-entry">
-      <div class="item-icon">
-        <img src="/api/image/${item.item_id}" alt="${item.category}"
-             onerror="console.error('Image failed to load:', this.src); this.style.display='none'; this.parentElement.querySelector('.icon-fallback').style.display='flex';"/>
-        <span class="icon-fallback" style="display:none;">${getCategoryIcon(item.category)}</span>
-      </div>
-      <div class="item-details">
-        <div class="item-category">${item.category}</div>
-        <div class="item-id">${item.item_id}</div>
-      </div>
-    </li>
-  `).join("");
-
-  card.innerHTML = `
-    <div class="outfit-card-header">
-      <span class="outfit-number">OUTFIT ${index + 1}</span>
-      <div class="outfit-scores">
-        <div class="score-badge">
-          <div class="value">${(outfit.compatibility_score || 0).toFixed(2)}</div>
-          <div class="label">COMPAT</div>
-        </div>
-        <div class="score-badge">
-          <div class="value">${(outfit.prompt_match_score || 0).toFixed(2)}</div>
-          <div class="label">MATCH</div>
-        </div>
-      </div>
-    </div>
-    <div class="outfit-items">
-      <h4>Items (${outfit.items.length})</h4>
-      <ul class="item-list">
-        ${itemsHtml}
-      </ul>
-    </div>
-  `;
-
-  return card;
-}
-
-/* ─── Main: Generate Outfits ─────────────────────────────────────────── */
-async function generateOutfits() {
-  const prompt = document.getElementById("prompt-input").value.trim();
-
-  if (!prompt) {
-    showAlert("Please enter a prompt to generate outfits.");
-    return;
-  }
-
-  clearAlert();
-  setLoading(true);
-
-  // Show results section with loading state
-  const resultsSection = document.getElementById("results-section");
-  const loadingOverlay = document.getElementById("loading-overlay");
-  const outfitGrid = document.getElementById("outfit-grid");
-  const emptyState = document.getElementById("empty-state");
-
-  resultsSection.classList.remove("hidden");
-  loadingOverlay.classList.remove("hidden");
-  outfitGrid.innerHTML = "";
-  emptyState.classList.add("hidden");
-
-  document.getElementById("prompt-display").textContent = `"${prompt}"`;
+  const btn = $('go');
+  btn.classList.add('loading');
+  $('alert').className = 'alert';
+  $('results').innerHTML = '<div class="loading-msg">Scoring outfits…</div>';
 
   try {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: prompt,
-        num_outfits: 3
-      })
+    const res = await fetch('/recommend', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prompt, k, alpha})
     });
-
     const data = await res.json();
-
-    loadingOverlay.classList.add("hidden");
-
-    if (!res.ok) {
-      showAlert(data.error || "Server error occurred.");
-      return;
-    }
-
-    if (!data.success || !data.outfits || data.outfits.length === 0) {
-      emptyState.classList.remove("hidden");
-      return;
-    }
-
-    // Render outfit cards
-    data.outfits.forEach((outfit, i) => {
-      outfitGrid.appendChild(renderOutfitCard(outfit, i));
-    });
-
+    if (!res.ok) throw new Error(data.error || 'server error');
+    render(data.results);
   } catch (e) {
-    loadingOverlay.classList.add("hidden");
-    showAlert("Request failed: " + e.message);
+    $('alert').className = 'alert error';
+    $('alert').textContent = 'Error: ' + e.message;
+    $('results').innerHTML = '';
   } finally {
-    setLoading(false);
+    btn.classList.remove('loading');
   }
 }
 
-/* ─── Enter Key to Submit ────────────────────────────────────────────── */
-document.getElementById("prompt-input").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") {
-    generateOutfits();
+function render(results) {
+  $('count').textContent = `· ${results.length} outfits`;
+  if (!results.length) {
+    $('results').innerHTML = '<div class="empty">No outfits matched.</div>';
+    return;
   }
-});
+  $('results').innerHTML = results.map((o, i) => `
+    <div class="outfit-card">
+      <div class="outfit-head">
+        <div class="outfit-rank">${i + 1}</div>
+        <div>
+          <div class="outfit-id">set_id ${escapeHtml(o.set_id)}</div>
+        </div>
+        <div class="outfit-scores">
+          <div class="score"><div class="v">${o.prompt_match_score}</div><div class="l">prompt</div></div>
+          <div class="score"><div class="v">${o.compatibility_score}</div><div class="l">compat</div></div>
+          <div class="score"><div class="v" style="color:var(--gold)">${o.final_score}</div><div class="l">final</div></div>
+        </div>
+      </div>
+      <div class="items">
+        ${o.items.map(it => `
+          <div class="item">
+            <div class="thumb">
+              <img src="${escapeHtml(it.image_url)}"
+                   alt="${escapeHtml(it.category)}"
+                   onerror="this.style.display='none';this.parentNode.innerHTML='<span class=&quot;no-img&quot;>◻</span>';"/>
+            </div>
+            <div class="meta">
+              <div class="cat">${escapeHtml(it.category)}</div>
+              <div class="id">${escapeHtml(it.item_id)}</div>
+              <div class="ps">prompt fit: ${it.prompt_score}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// auto-run once on load
+window.addEventListener('DOMContentLoaded', run);
 </script>
 </body>
 </html>

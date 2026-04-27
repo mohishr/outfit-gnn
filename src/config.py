@@ -1,9 +1,4 @@
-"""Project paths and runtime config.
-
-IMAGE_DIR is environment-overridable: set IMAGE_DIR to the folder where
-polyvore images live. Expected layout: IMAGE_DIR/<set_id>/<index>.jpg
-The Flask app falls back gracefully when an image isn't found.
-"""
+"""Project paths and runtime config."""
 import os
 from pathlib import Path
 
@@ -12,21 +7,26 @@ DATA = ROOT / "data"
 WEIGHTS = ROOT / "weights"
 WEIGHTS.mkdir(exist_ok=True)
 
-IMAGE_DIR = Path("C:\\Users\\shrey\\OneDrive\\Desktop\\Outfit-recommendation\\dataset\\images").expanduser().resolve()
+IMAGE_DIR = Path("C:\\Users\\shrey\\OneDrive\\Desktop\\Outfit-recommendation\\dataset\\images").resolve()
 
-NGNN_CKPT = WEIGHTS / "ngnn.pt"
-TEXT_CACHE = WEIGHTS / "cat_text_embeds.pt"
+# Splits — new dataset schema (items[] with name/price/likes/image/categoryid)
+TRAIN_FILE = "train_no_dup.json"
+VALID_FILE = "valid_no_dup.json"
+TEST_FILE  = "test_no_dup.json"
+FITB_FILE  = "fill_in_blank_test.json"
+COMPAT_FILE = "fashion_compatibility_prediction.txt"
 
-CLIP_MODEL = "openai/clip-vit-base-patch32"
-
-# ─────────── Category filtering ───────────
-# Categories with fewer occurrences in train+test are dropped. Combined with
-# the explicit deny-list in filter.py this leaves ~75 fashion categories.
+# ─── Filter ───
 MIN_CATEGORY_FREQ = 100
-# Outfits with fewer than this many surviving items after filtering are dropped.
 MIN_OUTFIT_SIZE = 3
 
-# ─────────── Model ───────────
+# ─── Model ───
 EMBED_DIM = 128
-GNN_HOPS = 2          # rounds of message passing inside the outfit clique
+GNN_HOPS = 2
 DROPOUT = 0.2
+VISUAL_DIM = 2048    # ResNet50 pooled feature size, used only if visuals.pt present
+
+# ─── Cached artefacts ───
+NGNN_CKPT   = WEIGHTS / "itemgnn.pt"
+ITEMS_CACHE = WEIGHTS / "items.pt"
+VISUAL_CACHE = WEIGHTS / "visuals.pt"

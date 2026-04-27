@@ -1,9 +1,10 @@
-"""Flask app: text prompt → outfit recommendations.
+"""Flask app: text prompt → item-level outfit recommendations.
 
-Set the IMAGE_DIR environment variable to enable image previews:
-    Windows PowerShell:  $env:IMAGE_DIR = "D:/path/to/polyvore-images"
-    bash:                export IMAGE_DIR=/path/to/polyvore-images
-Layout expected: IMAGE_DIR/<set_id>/<item_index>.jpg
+Routes:
+    GET  /                          — UI
+    POST /recommend                 — body {prompt, k, alpha}
+    POST /fill_blank                — body {partial_iids, target_cat?, prompt?, k}
+    GET  /image/<set>/<idx>          — serves $IMAGE_DIR/<set>/<idx>.jpg
 """
 import sys
 from pathlib import Path
@@ -21,12 +22,17 @@ rec = Recommender()
 
 @app.route("/")
 def home():
+    stats = {
+        "items": len(rec.items),
+        "outfits": len(rec.items.outfit_to_items),
+        "vocab": rec.items.vocab_size,
+        "cats": rec.d["num_cats"],
+    }
     return render_template(
         "index.html",
         image_dir=str(IMAGE_DIR),
         image_dir_ok=IMAGE_DIR.is_dir(),
-        clip_ok=rec.text._clip is not None,
-        stats=rec.stats,
+        stats=stats,
         ckpt=rec.ckpt_meta,
     )
 
@@ -51,6 +57,20 @@ def recommend():
     if alpha is not None:
         rec.alpha = max(0.0, min(1.0, float(alpha)))
     return jsonify({"prompt": prompt, "alpha": rec.alpha, "results": rec.recommend(prompt, k=k)})
+
+
+@app.route("/fill_blank", methods=["POST"])
+def fill_blank():
+    body = request.get_json(silent=True) or {}
+    partial = body.get("partial_iids") or []
+    target = body.get("target_cat")
+    prompt = (body.get("prompt") or "").strip()
+    k = int(body.get("k") or 5)
+    if not partial:
+        return jsonify({"error": "partial_iids required"}), 400
+    return jsonify({
+        "results": rec.fill_blank(partial, int(target) if target is not None else None, prompt, k)
+    })
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
 torch
 flask
 numpy
-transformers
+pillow
+# optional, for image-feature extraction (`python -m src.visual`):
+# torchvision

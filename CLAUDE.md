@@ -1,122 +1,150 @@
-# Outfit GNN — Text-to-Outfit Recommender (Production)
+# Outfit GNN — Item-Level Text-to-Outfit Recommender
 
-Text prompt → top-k Polyvore outfits, ranked by an NGNN compatibility score
-combined with a CLIP prompt-match score. Filtered to a fashion-only category
-set so beauty/tech/home noise can't pollute recommendations.
+Text prompt → top-k Polyvore outfits, ranked by an item-level GNN
+compatibility score combined with a prompt-match score computed in the
+*same* embedding space as the item names. Optionally enriched with
+ResNet50 visual features per item.
 
 ## Layout
 
 ```
-data/                          polyvore json (train/test outfit cliques, category map)
+data/                           polyvore json (new schema with item names)
+  train_no_dup.json             outfits w/ items[].{name, categoryid, image, ...}
+  valid_no_dup.json
+  test_no_dup.json
+  fill_in_blank_test.json       FITB benchmark (4 candidates, 1 correct)
+  fashion_compatibility_prediction.txt
+  category_id.txt
 src/
-  config.py                    paths + IMAGE_DIR + filter thresholds + model dims
-  filter.py                    deny-list of non-fashion categories
-  dataset.py                   load + filter outfits, dense category remap (cached)
-  model.py                     NGNN: emb -> T-hop msg pass + dropout -> pair MLP
-  text_encoder.py              CLIP text encoder (fallback: keyword + vibe table)
-  recommend.py                 3-stage pipeline (Recommender class + CLI)
-  train.py                     contrastive training, AUC eval, best-ckpt saving
+  config.py                     paths + IMAGE_DIR + filter & model dims
+  filter.py                     deny-list of non-fashion categories
+  dataset.py                    new-schema loader, deny-list filter
+  items.py                      item index, vocab, name tokens (cached)
+  model.py                      ItemGNN: name + cat + visual -> T-hop msg pass
+  visual.py                     OPTIONAL: ResNet50 feature extractor (torchvision)
+  train.py                      contrastive training, AUC + FITB eval
+  recommend.py                  pipeline: prompt -> outfits / fill-in-blank
 app/
-  app.py                       Flask: GET / · POST /recommend · GET /image/<set>/<i>
-  templates/index.html         editorial UI (cream + gold, serif + mono)
+  app.py                        Flask: /, /recommend, /fill_blank, /image/<set>/<i>
+  templates/index.html          editorial UI (cream + gold)
 weights/
-  ngnn.pt                      checkpoint (stores num_cats, dim, hops, AUC)
-  cat_text_embeds.pt           cached CLIP category embeddings
+  items.pt                      cached item index + vocab + tokens
+  visuals.pt                    OPTIONAL: [num_items, 2048] visual feats
+  itemgnn.pt                    model checkpoint (auc, fitb, use_visual stored)
 ```
 
-## Filtering — why and what
+## Why item-level (not category-level)
 
-The polyvore dataset includes Lipstick (2326 occurrences), Tech Accessories
-(2454), Eyeshadow, Nail Polish, Home Decor, Floral Decor, Books, Toys,
-Stationery, Drinkware, Food, Font etc. They co-occur with apparel inside
-"sets" but contribute no outfit-compatibility signal — they only dilute it.
+Previous version embedded *categories* — every item with `categoryid=46`
+(Sandals) had the same vector. The GNN could only learn "Sandals fit with
+Skinny Jeans". This couldn't choose *which* sandals.
 
-`filter.py` carries an explicit deny-list of ~43 non-fashion category names.
-Combined with `MIN_CATEGORY_FREQ` from `config.py`, this keeps **78
-fashion categories** out of the 380 in the raw category file (120 of which
-have any data). 16,431 / 16,983 train outfits and 2,521 / 2,697 test outfits
-survive (≥ 3 fashion items each).
+This version embeds *items* using:
+1. **Name embedding** — `EmbeddingBag` over the item-name tokens
+   ("citizens humanity high rise rocket hem jean" → mean of 7 word vectors).
+2. **Category embedding** — keeps the coarse cluster signal.
+3. **Visual embedding** — ResNet50-pooled feature, projected via a
+   `Linear(2048, dim)`. Optional, on if `weights/visuals.pt` exists.
 
-After filtering, `dataset.py` rebuilds a contiguous remap so the GNN
-embedding table has exactly `num_cats = 78` entries.
+Sum of the three goes into the GNN. Each *item* is a node now.
+
+## Prompt matching in the trained space
+
+The same word-embedding table that builds item-name features also embeds
+the user's prompt at recommendation time. Tokenise the prompt → mean of
+its word vectors → cosine similarity with every item's name vector
+(both in the same learnt space). This means "blue silk dress" actually
+finds items literally named "blue silk dress" — a huge upgrade over
+matching prompt against category names.
+
+## NGNN architecture
+
+```
+word_emb     Embedding(vocab=2589, 128)
+cat_emb      Embedding(num_cats=106, 128)
+visual_proj  Linear(2048, 128)              # optional, gated by use_visual
+
+item_feat    = mean(word_emb(name_tokens))
+              + cat_emb(cat_dense)
+              + visual_proj(visual_feat)    # if use_visual
+
+T = 2 hops of leave-one-out msg passing within an outfit clique:
+    m   = msg(h)
+    agg = (sum(m) - m) / (n-1)
+    h   = ReLU(upd([h || agg]))   then dropout(0.2)
+
+score    MLP(2*128 -> 128 -> 1)            # pair compatibility logit
+outfit_score(O) = mean(sigmoid(pair_logits(O)))
+```
+
+## Training (item-level contrastive)
+
+Per real outfit O of size n:
+- positive features = item_feat(O)
+- hard negative   = item_feat(O with one slot replaced by a uniformly random
+                    item from the corpus)
+- loss = BCE(pair_logits(pos), 1) + BCE(pair_logits(neg), 0)
+
+AdamW(lr=2e-3, wd=1e-4), cosine LR, grad-clip 1.0.
+
+## Evaluation
+
+| Metric | What it measures |
+|---|---|
+| Outfit AUC | `P(score(real outfit) > score(corrupted outfit))` |
+| FITB@500   | Polyvore fill-in-the-blank: 4 candidates, pick ground truth |
+
+Both are logged each epoch; the best-AUC checkpoint is saved with
+metadata embedded.
 
 ## Pipeline
 
-**Stage 1 — Prompt → category preference vector (TextEncoder)**
-CLIP text encoder embeds the prompt and every kept category name
-("a fashion item: <name>"). Cosine similarity → min-max normalised score
-per category. Falls back to a curated vibe synonym table (summer →
-shorts/sandals/sunglasses, winter → coats/sweaters/boots, etc.) if CLIP
-isn't available.
-
-**Stage 2 — Score every candidate outfit**
+**1. Recommend (prompt → outfits)**
+For every cached outfit:
 ```
-prompt_match = mean(cat_score[c_i])               in [0, 1]
-compat       = NGNN.outfit_score(rcats(O))         in [0, 1]   (precomputed)
-final        = α · prompt_match + (1-α) · compat
+prompt_score(O) = mean over items i of cos(prompt_vec, name_vec(i))
+compat_score(O) = mean(sigmoid(pair_logits(item_feat(O))))   # precomputed
+final = α · prompt_score + (1-α) · compat_score
 ```
+Return top-k outfits with their items.
 
-**Stage 3 — Return top-k outfits**
-Each item carries `set_id`, `index`, category name, and `image_url`
-(`/image/<set_id>/<index>` — served from `$IMAGE_DIR/<set_id>/<index>.jpg`).
-
-## NGNN
-
+**2. Fill blank (partial outfit + target category → best item)**
+For every candidate item in the target category:
 ```
-emb:        Embedding(78, 128)                     category vectors
-msg_l:      [Linear(128, 128)] × hops              per-hop message projection
-upd_l:      [Linear(256, 128)] × hops              fuse self || mean(neighbours)
-dropout:    p=0.2 after each hop and inside scorer
-score:      MLP(256 -> 128 -> 1)                   pair compatibility logit
+score(c) = α · prompt_score(c) + (1-α) · compat_score(partial ∪ {c})
 ```
+Return top-k items.
 
-`hops = 2`: each item sees 2-hop outfit context — neighbours that themselves
-were refined by their own neighbours.
-
-## Training
-
-Per real outfit O (size n):
-- `pos = O`                         — all internal pairs are positive
-- `easy_neg = n random distinct categories` — fully random outfit
-- `hard_neg = O with one slot replaced by a random category` — almost-real
-
-Loss = BCE on positive pairs + BCE on both negative sets.
-Optimiser: AdamW (`lr=2e-3`, `wd=1e-4`), cosine LR schedule, grad-clip 1.0.
-
-Hard negatives matter: a model that only sees fully-random negatives learns
-to detect "is this set incoherent at all" (easy). Hard negatives push it
-to learn "is this *the right* item for this slot", which is what
-recommendation needs.
-
-## Evaluation — AUC on the held-out test split
-
-Per test outfit:
-```
-pos_score = NGNN.outfit_score(real_cats)
-neg_score = NGNN.outfit_score(real_cats with one slot replaced)
-```
-Then `AUC = P(pos_score > neg_score)` over all (pos, neg) pairs.
-
-The training loop logs AUC every epoch and keeps the best-AUC state. The
-checkpoint records its AUC; the UI surfaces it as a status pill.
-
-## Why outfit retrieval, not item generation
-
-The GNN scores categories, not items — every item of category C has the same
-embedding. Per-item ranking inside a category needs item-level features
-(visual or textual) or one-node-per-item training. The honest framing today
-is: "rank existing outfits by category-level compatibility weighted against
-prompt match, return their items".
-
-Upgrade path: replace `cid2rcid` with a dense item-id remap (`set_id_idx ->
-int`), keep the NGNN otherwise unchanged. Each item becomes its own node;
-co-occurrence trains item-specific embeddings. ~30 line change in
-`dataset.py` and `model.py`.
-
-## Run
+## Running
 
 ```bash
-pip install -r requirements.txt          # torch, flask, numpy, transformer
+pip install -r requirements.txt              # torch + flask + numpy + pillow
 
-python app/app.py                        # http://localhost:5000
+# (optional) image features:
+pip install torchvision
+python -m src.visual                         # ~30 min CPU, 113k items
+
+python -m src.dataset                        # filter stats
+python -m src.items                          # build item index + vocab
+python -m src.train --dummy                  # random weights for the demo
+python -m src.train                          # real training, ~5-10 min/epoch CPU
+python -m src.train --eval                   # AUC + FITB on test split
+
+python -m src.recommend "summer cozy blue vibes"
+python app/app.py                            # http://localhost:5000
 ```
+
+## Data labelling — to answer the recurring question
+
+There is **no explicit "compatible / incompatible" label file**. Compatibility
+is derived from co-occurrence in real polyvore sets:
+
+- **Positives**: items that appear in the same set are treated as compatible.
+  Polyvore sets were curated by humans to be coherent outfits, so this is a
+  strong (if noisy) signal.
+- **Hard negatives** (training): a real outfit with one slot replaced by a
+  random item from the corpus.
+
+`fashion_compatibility_prediction.txt` provides labelled pos/neg outfits for
+benchmarking (1 = compatible, 0 = not), and `fill_in_blank_test.json` gives
+multiple-choice fill-in-blank questions — both used for evaluation.
